@@ -328,6 +328,53 @@
       color: var(--sp-text);
     }
 
+    /* ── Stage 4 슬라이더 ── */
+    #stage4-panel { display: none; flex-direction: column; gap: 10px; }
+    #gemini-status {
+      font-size: 12px;
+      color: var(--sp-text-sub);
+      text-align: center;
+      min-height: 18px;
+    }
+    .mix-slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--sp-text-muted);
+      margin-bottom: 4px;
+    }
+    #mix-ratio-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--sp-border-2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    #mix-ratio-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--sp-green);
+      cursor: pointer;
+    }
+    #mix-ratio-slider::-moz-range-thumb {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--sp-green);
+      border: none;
+      cursor: pointer;
+    }
+    #comp-gemini-row {
+      font-size: 12px;
+      color: var(--sp-text-sub);
+      text-align: center;
+      padding: 6px 0 0;
+      border-top: 1px solid var(--sp-border);
+    }
+
     /* ── 반응형 (768px 이하: 패널 아래로) ── */
     @media (max-width: 768px) {
       body {
@@ -378,8 +425,9 @@
 
   <div id="stage-tabs">
     <button class="tab-btn active" data-stage="1">1단계<br>대칭</button>
-    <button class="tab-btn"        data-stage="2">2단계<br>반복패턴</button>
-    <button class="tab-btn"        data-stage="3">3단계<br>자기닮음</button>
+    <button class="tab-btn"        data-stage="2">2단계<br>패턴</button>
+    <button class="tab-btn"        data-stage="3">3단계<br>닮음</button>
+    <button class="tab-btn"        data-stage="4">4단계<br>Gemini</button>
   </div>
 
   <div id="dashboard">
@@ -405,6 +453,21 @@
 
   <button class="action-btn" id="play-btn">▶ 재생</button>
   <button class="action-btn" id="detect-btn" style="display:none;">대칭 판별하기</button>
+
+  <!-- 4단계: Gemini 믹스 UI -->
+  <div id="stage4-panel">
+    <button class="action-btn" id="gemini-upload-btn"
+      style="background:var(--sp-surface-2);color:var(--sp-text);border:1px solid var(--sp-border-3);">
+      Gemini 음원 업로드
+    </button>
+    <div id="gemini-status">업로드 대기 중</div>
+    <div>
+      <div class="mix-slider-labels"><span>비트</span><span>Gemini</span></div>
+      <input type="range" id="mix-ratio-slider" min="0" max="100" value="50">
+    </div>
+  </div>
+  <input type="file" id="gemini-file-input" accept="audio/*" style="display:none;">
+
   <button class="action-btn" id="finish-btn" style="display:none;">비트 완성!</button>
   <button class="action-btn" id="reset-btn">↺ 초기화</button>
 </div>
@@ -447,8 +510,9 @@
         </div>
       </div>
     </div>
+    <div id="comp-gemini-row"></div>
     <div id="completion-btns">
-      <button id="download-btn">⬇ 음원 다운로드</button>
+      <button id="download-btn">⬇ 최종 음원 다운로드</button>
       <button id="close-completion-btn">계속 탐색하기</button>
     </div>
   </div>
@@ -512,6 +576,12 @@ const State = {
     dragStart: null,      // {x,y}
     dragCurrent: null,    // {x,y}
   },
+
+  stage4: {
+    geminiBuffer: null,   // ArrayBuffer (FileReader 결과)
+    mixRatio: 0.5,        // 0 = 비트 100%, 1 = Gemini 100%
+    done: false,
+  },
 };
 
 function resetStage(n) {
@@ -534,6 +604,10 @@ function resetStage(n) {
       firstLine:null, secondLine:null, ratio:null, done:false,
     });
     AudioEngine.resetAudioStage1();
+  } else if (n === 4) {
+    Object.assign(State.stage4, { geminiBuffer:null, mixRatio:0.5, done:false });
+    document.getElementById('gemini-status').textContent = '업로드 대기 중';
+    document.getElementById('mix-ratio-slider').value = 50;
   }
 }
 
@@ -1419,21 +1493,19 @@ const Stage3 = {
 // [UI]
 // ============================================================
 function updateDashboard() {
-  const s1=State.stage1, s2=State.stage2, s3=State.stage3;
-  // 탭 순서: 1=대칭(s2), 2=반복패턴(s3), 3=자기닮음(s1)
+  const s1=State.stage1, s2=State.stage2, s3=State.stage3, s4=State.stage4;
+  // 탭 순서: 1=대칭(s2), 2=반복패턴(s3), 3=자기닮음(s1), 4=Gemini믹스(s4)
   document.getElementById('dash-bpm').textContent = s3.bpm || 100;
   document.getElementById('dash-ratio').textContent =
     s1.ratio !== null ? s1.ratio.toFixed(2) : '—';
   document.getElementById('dash-sym').textContent =
     s2.symmetryType === 'line'  ? '선대칭' :
     s2.symmetryType === 'point' ? '점대칭' : '—';
-
-  // 반복 패턴: 스티커 개수만 표시
   document.getElementById('dash-sticker').textContent =
     s3.stickers.length > 0 ? `${s3.stickers.length}개` : '—';
 
-  // 탭 상태 업데이트 — done 매핑: 탭1=s2, 탭2=s3, 탭3=s1
-  const tabDoneMap = { 1: s2, 2: s3, 3: s1 };
+  // 탭 상태 업데이트
+  const tabDoneMap = { 1: s2, 2: s3, 3: s1, 4: s4 };
   document.querySelectorAll('.tab-btn').forEach(btn => {
     const n = parseInt(btn.dataset.stage);
     btn.classList.remove('active','done');
@@ -1441,22 +1513,27 @@ function updateDashboard() {
     if (tabDoneMap[n]?.done) btn.classList.add('done');
   });
 
-  // 단계 설명 — 새 순서 기준
+  // 단계 설명
   const descs = {
     1: '대칭이라고 생각하는 점들을\n원하는 만큼 클릭하세요.\n\n다 찍었으면 [대칭 판별하기] 버튼!\n선대칭/점대칭에 따라 스네어가 달라져요',
     2: '먼저 드래그로 반복 패턴 한 칸 크기를\n정해보세요!\n\n크기를 정한 뒤, 패턴 위치를\n클릭해서 스티커를 붙여보세요!\n\n스티커 수 → BPM / 크기 → 하이햇',
     3: '기준 모양(큰 조각)을 드래그하고,\n닮은 모양(작은 조각)도 드래그해서\n닮음비를 찾아보세요!\n\n비율이 작을수록 킥이 경쾌해져요',
+    4: 'Gemini가 만든 30초 음원을\n업로드하면 수학 비트와 믹싱돼요!\n\n슬라이더로 비트와 Gemini 음원의\n볼륨 밸런스를 조절하세요',
   };
   document.getElementById('stage-desc').textContent =
-    State.uploadedImage ? descs[State.currentStage] : '이미지를 업로드하면 시작할 수 있어요!';
+    State.uploadedImage ? (descs[State.currentStage] || '') : '이미지를 업로드하면 시작할 수 있어요!';
 
-  // 대칭 판별 버튼: 탭1(대칭) + 이미지 있을 때만
+  // 대칭 판별 버튼: 탭1 + 이미지 있을 때만
   document.getElementById('detect-btn').style.display =
     (State.currentStage === 1 && !!State.uploadedImage) ? 'block' : 'none';
 
-  // 완료 버튼: 탭3(자기닮음) + 이미지 있을 때만
+  // 4단계 패널: 탭4 + 이미지 있을 때만
+  document.getElementById('stage4-panel').style.display =
+    (State.currentStage === 4 && !!State.uploadedImage) ? 'flex' : 'none';
+
+  // 완료 버튼: 탭4 + Gemini 업로드 완료 시
   document.getElementById('finish-btn').style.display =
-    (State.currentStage === 3 && !!State.uploadedImage) ? 'block' : 'none';
+    (State.currentStage === 4 && s4.done) ? 'block' : 'none';
 }
 
 function showCompletion() {
@@ -1500,6 +1577,13 @@ function showCompletion() {
     s1.ratio < 0.7   ? '중간 킥' : '묵직한 킥';
   document.getElementById('comp-kick').textContent = kickText;
 
+  // Gemini 믹스 비율
+  const ratio = State.stage4.mixRatio;
+  const beatPct   = Math.round((1 - ratio) * 100);
+  const geminiPct = Math.round(ratio * 100);
+  document.getElementById('comp-gemini-row').textContent =
+    `Gemini 믹스 — 비트 ${beatPct}% + Gemini ${geminiPct}%`;
+
   document.getElementById('completion-overlay').classList.add('visible');
 }
 
@@ -1525,6 +1609,73 @@ function audioBufferToWav(buffer) {
     }
   }
   return new Blob([ab], { type:'audio/wav' });
+}
+
+// ============================================================
+// [MIX] — 비트 + Gemini 믹싱 & WAV 다운로드
+// ============================================================
+async function mixAndDownload() {
+  const btn = document.getElementById('download-btn');
+  btn.textContent = '⏳ 렌더링 중...';
+  btn.disabled = true;
+  try {
+    // 1. 비트 오프라인 렌더 (30초)
+    const beatBuf = await AudioEngine.renderOfflineWAV(30);
+
+    // 2. Gemini 음원 디코딩
+    const ac = new AudioContext();
+    const geminiBuf = await ac.decodeAudioData(State.stage4.geminiBuffer.slice(0));
+    await ac.close();
+
+    // 3. 믹스 파라미터 (equal-power crossfade)
+    const ratio      = State.stage4.mixRatio;
+    const beatGain   = Math.cos(ratio * Math.PI / 2);
+    const geminiGain = Math.sin(ratio * Math.PI / 2);
+
+    const sr     = beatBuf.sampleRate;
+    const outLen = Math.min(beatBuf.length, geminiBuf.length);
+
+    // 4. 출력 버퍼 생성 (mono)
+    const mixCtx = new OfflineAudioContext(1, outLen, sr);
+    const outBuf  = mixCtx.createBuffer(1, outLen, sr);
+    const outData = outBuf.getChannelData(0);
+
+    // beat → mono 합산
+    const beatMono = new Float32Array(outLen);
+    for (let ch = 0; ch < beatBuf.numberOfChannels; ch++) {
+      const d = beatBuf.getChannelData(ch);
+      for (let i = 0; i < outLen; i++) beatMono[i] += d[i];
+    }
+    const bDiv = beatBuf.numberOfChannels;
+
+    // gemini → mono 합산
+    const geminiMono = new Float32Array(outLen);
+    for (let ch = 0; ch < geminiBuf.numberOfChannels; ch++) {
+      const d = geminiBuf.getChannelData(ch);
+      for (let i = 0; i < outLen; i++) geminiMono[i] += d[i];
+    }
+    const gDiv = geminiBuf.numberOfChannels;
+
+    // 믹싱
+    for (let i = 0; i < outLen; i++) {
+      outData[i] = (beatMono[i] / bDiv) * beatGain + (geminiMono[i] / gDiv) * geminiGain;
+    }
+
+    // 5. WAV 다운로드
+    const blob = audioBufferToWav(outBuf);
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'math-beat-final.wav';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('믹싱 오류:', err);
+    alert('음원 생성 중 오류가 발생했습니다. 콘솔을 확인해주세요.');
+  } finally {
+    btn.textContent = '⬇ 최종 음원 다운로드';
+    btn.disabled = false;
+  }
 }
 
 // ============================================================
@@ -1708,30 +1859,31 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('completion-overlay').classList.remove('visible');
   });
 
-  // ── 음원 다운로드 ──
-  document.getElementById('download-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('download-btn');
-    btn.textContent = '⏳ 렌더링 중... (약 16초)';
-    btn.disabled = true;
-    try {
-      const audioBuffer = await AudioEngine.renderOfflineWAV(30);
-      const blob = audioBufferToWav(audioBuffer);
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = 'math-beat.wav';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('WAV 렌더링 오류:', err);
-      alert('음원 생성 중 오류가 발생했습니다. 콘솔을 확인해주세요.');
-    } finally {
-      btn.textContent = '⬇ 음원 다운로드 (WAV)';
-      btn.disabled = false;
-    }
+  // ── Gemini 음원 업로드 ──
+  const geminiUploadBtn = document.getElementById('gemini-upload-btn');
+  const geminiFileInput = document.getElementById('gemini-file-input');
+  geminiUploadBtn.addEventListener('click', () => geminiFileInput.click());
+  geminiFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      State.stage4.geminiBuffer = ev.target.result;
+      State.stage4.done = true;
+      document.getElementById('gemini-status').textContent = `✓ ${file.name}`;
+      updateDashboard();
+    };
+    reader.readAsArrayBuffer(file);
+    geminiFileInput.value = '';
   });
+
+  // ── 믹스 비율 슬라이더 ──
+  document.getElementById('mix-ratio-slider').addEventListener('input', (e) => {
+    State.stage4.mixRatio = parseInt(e.target.value) / 100;
+  });
+
+  // ── 최종 음원 다운로드 (믹싱) ──
+  document.getElementById('download-btn').addEventListener('click', () => mixAndDownload());
 
   updateDashboard();
 });
