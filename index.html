@@ -87,7 +87,13 @@
       color: var(--sp-text-sub);
       letter-spacing: 0.3px;
     }
-    #file-input { display: none; }
+    #file-input {
+      position: absolute;
+      width: 1px; height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
 
     /* ── 컨트롤 패널 ── */
     #control-panel {
@@ -1605,11 +1611,11 @@ new p5(function(p) {
   };
 
   p.touchStarted = function() {
-    if (!State.uploadedImage) return false;
+    if (!State.uploadedImage) return; // 업로드 오버레이 터치는 브라우저 기본 동작 허용
     if (State.currentStage === 1) Stage2.onMousePressed(p, imgX, imgY, imgW, imgH);
     if (State.currentStage === 2) Stage3.onMousePressed(p);
     if (State.currentStage === 3) Stage1.onMousePressed(p);
-    return false; // 스크롤/줌 방지
+    return false;
   };
 
   p.touchMoved = function() {
