@@ -65,6 +65,8 @@
     #upload-overlay.hidden { display: none; }
 
     #upload-btn {
+      position: relative; /* input absolute 기준 */
+      display: inline-block;
       padding: 14px 34px;
       background: var(--sp-green);
       border: none;
@@ -77,6 +79,7 @@
       text-transform: uppercase;
       cursor: pointer;
       transition: transform 0.1s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
     }
     #upload-btn:hover {
       transform: scale(1.05);
@@ -364,9 +367,12 @@
 ══════════════════════════════════════════════════════ -->
 <div id="canvas-container">
   <div id="upload-overlay">
-    <button id="upload-btn">이미지 업로드</button>
+    <label id="upload-btn">
+      이미지 업로드
+      <input type="file" id="file-input" accept="image/*"
+        style="position:absolute;width:0;height:0;opacity:0;overflow:hidden;">
+    </label>
     <p>패턴이나 무늬가 있는 사진을 골라보세요</p>
-    <input type="file" id="file-input" accept="image/*">
     <div id="dbg" style="font-size:11px;color:#aaa;text-align:center;max-width:280px;word-break:break-all;"></div>
   </div>
 </div>
@@ -1649,9 +1655,8 @@ new p5(function(p) {
 document.addEventListener('DOMContentLoaded', () => {
 
   // ── 이미지 업로드 ──
-  const uploadBtn = document.getElementById('upload-btn');
   const fileInput = document.getElementById('file-input');
-  uploadBtn.addEventListener('click', () => fileInput.click());
+  // upload-btn은 label이므로 JS click 리스너 불필요 — 브라우저가 직접 input 활성화
 
   const dbg = document.getElementById('dbg');
   const log = (msg) => { dbg.textContent = msg; console.log('[DBG]', msg); };
