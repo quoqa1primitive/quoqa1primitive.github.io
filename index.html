@@ -1716,11 +1716,15 @@ new p5(function(p) {
   };
 
   p.touchStarted = function() {
-    if (!State.uploadedImage) return; // 업로드 오버레이 터치는 브라우저 기본 동작 허용
+    if (!State.uploadedImage) return;
+    // 캔버스 범위 밖 터치(버튼 등)는 브라우저 기본 동작 허용
+    const onCanvas = p.mouseX >= 0 && p.mouseX <= p.width &&
+                     p.mouseY >= 0 && p.mouseY <= p.height;
+    if (!onCanvas) return;
     if (State.currentStage === 1) Stage2.onMousePressed(p, imgX, imgY, imgW, imgH);
     if (State.currentStage === 2) Stage3.onMousePressed(p);
     if (State.currentStage === 3) Stage1.onMousePressed(p);
-    return false;
+    return false; // 캔버스 안에서만 스크롤 방지
   };
 
   p.touchMoved = function() {
