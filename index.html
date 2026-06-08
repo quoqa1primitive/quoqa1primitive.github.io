@@ -336,37 +336,6 @@
       text-align: center;
       min-height: 18px;
     }
-    .mix-slider-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      color: var(--sp-text-muted);
-      margin-bottom: 4px;
-    }
-    #mix-ratio-slider {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 4px;
-      background: var(--sp-border-2);
-      border-radius: 2px;
-      outline: none;
-      cursor: pointer;
-    }
-    #mix-ratio-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 24px; height: 24px;
-      border-radius: 50%;
-      background: var(--sp-green);
-      cursor: pointer;
-    }
-    #mix-ratio-slider::-moz-range-thumb {
-      width: 24px; height: 24px;
-      border-radius: 50%;
-      background: var(--sp-green);
-      border: none;
-      cursor: pointer;
-    }
     #comp-gemini-row {
       font-size: 12px;
       color: var(--sp-text-sub);
@@ -461,10 +430,6 @@
       Gemini 음원 업로드
     </button>
     <div id="gemini-status">업로드 대기 중</div>
-    <div>
-      <div class="mix-slider-labels"><span>비트</span><span>Gemini</span></div>
-      <input type="range" id="mix-ratio-slider" min="0" max="100" value="50">
-    </div>
   </div>
   <input type="file" id="gemini-file-input" accept="audio/*" style="display:none;">
 
@@ -607,7 +572,6 @@ function resetStage(n) {
   } else if (n === 4) {
     Object.assign(State.stage4, { geminiBuffer:null, mixRatio:0.5, done:false });
     document.getElementById('gemini-status').textContent = '업로드 대기 중';
-    document.getElementById('mix-ratio-slider').value = 50;
   }
 }
 
@@ -1577,12 +1541,8 @@ function showCompletion() {
     s1.ratio < 0.7   ? '중간 킥' : '묵직한 킥';
   document.getElementById('comp-kick').textContent = kickText;
 
-  // Gemini 믹스 비율
-  const ratio = State.stage4.mixRatio;
-  const beatPct   = Math.round((1 - ratio) * 100);
-  const geminiPct = Math.round(ratio * 100);
   document.getElementById('comp-gemini-row').textContent =
-    `Gemini 믹스 — 비트 ${beatPct}% + Gemini ${geminiPct}%`;
+    'Gemini 믹스 — 비트 50% + Gemini 50%';
 
   document.getElementById('completion-overlay').classList.add('visible');
 }
@@ -1875,11 +1835,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     reader.readAsArrayBuffer(file);
     geminiFileInput.value = '';
-  });
-
-  // ── 믹스 비율 슬라이더 ──
-  document.getElementById('mix-ratio-slider').addEventListener('input', (e) => {
-    State.stage4.mixRatio = parseInt(e.target.value) / 100;
   });
 
   // ── 최종 음원 다운로드 (믹싱) ──
