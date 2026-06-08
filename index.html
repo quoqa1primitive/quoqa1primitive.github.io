@@ -367,6 +367,7 @@
     <button id="upload-btn">이미지 업로드</button>
     <p>패턴이나 무늬가 있는 사진을 골라보세요</p>
     <input type="file" id="file-input" accept="image/*">
+    <div id="dbg" style="font-size:11px;color:#aaa;text-align:center;max-width:280px;word-break:break-all;"></div>
   </div>
 </div>
 
@@ -1548,9 +1549,14 @@ new p5(function(p) {
     if (window._pendingImageURL) {
       const url = window._pendingImageURL;
       window._pendingImageURL = null;
+      const dbgEl = document.getElementById('dbg');
+      if (dbgEl) dbgEl.textContent = '[6] p5.loadImage 시작';
       p.loadImage(url, img => {
+        if (dbgEl) dbgEl.textContent = '[7] 이미지 로드 성공 ✓';
         State.uploadedImage = img;
         updateDashboard();
+      }, err => {
+        if (dbgEl) dbgEl.textContent = `[7] 이미지 로드 실패: ${err}`;
       });
     }
 
@@ -1647,15 +1653,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.getElementById('file-input');
   uploadBtn.addEventListener('click', () => fileInput.click());
 
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    // 파일 읽기만 수행 (Tone.start()는 재생 버튼에서 처리)
-    const url = URL.createObjectURL(file);
-    window._pendingImageURL = url;
-    document.getElementById('upload-overlay').classList.add('hidden');
-    updateDashboard();
-    fileInput.value = '';
+  const dbg = document.getElementById('dbg');
+  const log = (msg) => { dbg.textContent = msg; console.log('[DBG]', msg); };
+
+  // change + input 둘 다 감지 (Android 호환)
+  ['change', 'input'].forEach(evtName => {
+    fileInput.addEventListener(evtName, (e) => {
+      if (window._uploadHandled) return; // 중복 방지
+      const file = e.target.files[0];
+      log(`[1] ${evtName} 이벤트 감지 / file=${file ? file.name : 'null'}`);
+      if (!file) { log('[1] 파일 없음 — 종료'); return; }
+      window._uploadHandled = true;
+      setTimeout(() => { window._uploadHandled = false; }, 1000);
+
+      let url;
+      try {
+        url = URL.createObjectURL(file);
+        log(`[2] createObjectURL 성공`);
+      } catch(err) {
+        log(`[2] createObjectURL 실패: ${err.message}`);
+        return;
+      }
+
+      window._pendingImageURL = url;
+      log('[3] pendingImageURL 설정 완료');
+      document.getElementById('upload-overlay').classList.add('hidden');
+      log('[4] 오버레이 숨김');
+      updateDashboard();
+      log('[5] updateDashboard 완료');
+      fileInput.value = '';
+    });
   });
 
   // ── 단계 탭 ──
