@@ -1813,7 +1813,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 완료 팝업 닫기 ──
   // 대칭 판별 버튼
-  document.getElementById('detect-btn').addEventListener('click', () => {
+  document.getElementById('detect-btn').addEventListener('click', async () => {
+    await AudioEngine.init(); // 재생 전 판별 시에도 오디오 초기화 보장
     const p   = window._p5Instance;
     const imgW = window._canvasImgW || 500;
     if (p) Stage2.detectAndApply(p, imgW);
