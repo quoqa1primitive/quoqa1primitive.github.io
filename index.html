@@ -1714,7 +1714,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = '⏳ 렌더링 중... (약 16초)';
     btn.disabled = true;
     try {
-      const audioBuffer = await AudioEngine.renderOfflineWAV(16);
+      const audioBuffer = await AudioEngine.renderOfflineWAV(30);
       const blob = audioBufferToWav(audioBuffer);
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
