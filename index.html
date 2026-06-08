@@ -87,13 +87,7 @@
       color: var(--sp-text-sub);
       letter-spacing: 0.3px;
     }
-    #file-input {
-      position: absolute;
-      width: 1px; height: 1px;
-      opacity: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
+    #file-input { display: none; }
 
     /* ── 컨트롤 패널 ── */
     #control-panel {
@@ -370,7 +364,7 @@
 ══════════════════════════════════════════════════════ -->
 <div id="canvas-container">
   <div id="upload-overlay">
-    <label id="upload-btn" for="file-input">이미지 업로드</label>
+    <button id="upload-btn">이미지 업로드</button>
     <p>패턴이나 무늬가 있는 사진을 골라보세요</p>
     <input type="file" id="file-input" accept="image/*">
   </div>
@@ -1643,7 +1637,9 @@ new p5(function(p) {
 document.addEventListener('DOMContentLoaded', () => {
 
   // ── 이미지 업로드 ──
+  const uploadBtn = document.getElementById('upload-btn');
   const fileInput = document.getElementById('file-input');
+  uploadBtn.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
