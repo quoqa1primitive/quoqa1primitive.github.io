@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수학 비트 메이커</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <style>
+    /* ── Spotify Design System Tokens ── */
+    :root {
+      --sp-base:       #121212;
+      --sp-surface-1:  #181818;
+      --sp-surface-2:  #1f1f1f;
+      --sp-surface-3:  #252525;
+      --sp-green:      #1ed760;
+      --sp-green-dim:  #169c46;
+      --sp-text:       #ffffff;
+      --sp-text-sub:   #b3b3b3;
+      --sp-text-muted: #6a6a6a;
+      --sp-border:     #282828;
+      --sp-border-2:   #3e3e3e;
+      --sp-border-3:   #7c7c7c;
+      --sp-red:        #f3727f;
+      --sp-blue:       #539df5;
+      --sp-elev-2: rgba(0,0,0,0.30) 0px 8px 8px;
+      --sp-elev-3: rgba(0,0,0,0.50) 0px 8px 24px;
+      --sp-font: 'Inter', 'Circular Std', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      display: flex;
+      height: 100vh;
+      background: var(--sp-base);
+      color: var(--sp-text);
+      font-family: var(--sp-font);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── 캔버스 영역 ── */
+    #canvas-container {
+      width: 70%;
+      height: 100vh;
+      position: relative;
+      background: var(--sp-base);
+    }
+    #canvas-container canvas { display: block; }
+
+    #upload-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 10;
+      pointer-events: all;
+    }
+    #upload-overlay.hidden { display: none; }
+
+    #upload-btn {
+      padding: 14px 34px;
+      background: var(--sp-green);
+      border: none;
+      border-radius: 9999px;
+      color: #000000;
+      font-family: var(--sp-font);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.15s;
+    }
+    #upload-btn:hover {
+      transform: scale(1.05);
+      background: #1fdf64;
+    }
+    #upload-overlay p {
+      font-size: 14px;
+      color: var(--sp-text-sub);
+      letter-spacing: 0.3px;
+    }
+    #file-input { display: none; }
+
+    /* ── 컨트롤 패널 ── */
+    #control-panel {
+      width: 30%;
+      height: 100vh;
+      background: var(--sp-base);
+      border-left: 1px solid var(--sp-border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    #app-title {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--sp-text-sub);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding-bottom: 4px;
+    }
+
+    /* 탭 */
+    #stage-tabs { display: flex; gap: 6px; }
+    .tab-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: 1px solid var(--sp-border-2);
+      border-radius: 9999px;
+      background: transparent;
+      color: var(--sp-text-sub);
+      font-family: var(--sp-font);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      cursor: pointer;
+      line-height: 1.5;
+      transition: all 0.15s;
+      opacity: 0.6;
+    }
+    .tab-btn:hover { opacity: 1; border-color: var(--sp-border-3); color: var(--sp-text); }
+    .tab-btn.active  {
+      background: var(--sp-text);
+      color: #000000;
+      border-color: var(--sp-text);
+      opacity: 1;
+    }
+    .tab-btn.done    {
+      border-color: var(--sp-green);
+      color: var(--sp-green);
+      opacity: 1;
+    }
+    .tab-btn.done.active {
+      background: var(--sp-green);
+      color: #000000;
+      border-color: var(--sp-green);
+    }
+
+    /* 대시보드 */
+    #dashboard {
+      background: var(--sp-surface-1);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--sp-elev-2);
+    }
+    .dash-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .dash-label { color: var(--sp-text-sub); font-weight: 400; }
+    .dash-value { color: var(--sp-green); font-weight: 700; }
+
+    /* 단계 설명 */
+    #stage-desc {
+      background: var(--sp-surface-2);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--sp-text-sub);
+      white-space: pre-line;
+      min-height: 80px;
+    }
+
+    /* 버튼들 */
+    .action-btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 9999px;
+      font-family: var(--sp-font);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.15s;
+    }
+    .action-btn:hover { transform: scale(1.04); }
+
+    #play-btn {
+      background: var(--sp-green);
+      color: #000000;
+    }
+    #play-btn:hover { background: #1fdf64; }
+
+    #detect-btn {
+      background: var(--sp-surface-2) !important;
+      color: var(--sp-text) !important;
+      border: 1px solid var(--sp-border-3) !important;
+    }
+    #detect-btn:hover { background: var(--sp-surface-3) !important; }
+
+    #finish-btn {
+      background: var(--sp-text) !important;
+      color: #000000 !important;
+    }
+    #finish-btn:hover { background: #e0e0e0 !important; }
+
+    #reset-btn {
+      background: var(--sp-surface-2);
+      color: var(--sp-text-sub);
+      border: 1px solid var(--sp-border-2);
+    }
+    #reset-btn:hover { background: var(--sp-surface-3); color: var(--sp-text); }
+
+    /* 완료 오버레이 */
+    #completion-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.87);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    #completion-overlay.visible { display: flex; }
+    #completion-card {
+      background: var(--sp-surface-1);
+      border: 1px solid var(--sp-border-2);
+      border-radius: 8px;
+      padding: 28px 32px;
+      max-width: 680px;
+      width: 94%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+      box-shadow: var(--sp-elev-3);
+    }
+    #completion-card h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--sp-text);
+      letter-spacing: -0.3px;
+    }
+    #completion-cards-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .comp-card {
+      background: var(--sp-surface-2);
+      border-radius: 6px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+    }
+    .comp-card-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: var(--sp-text-muted);
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--sp-border);
+    }
+    .comp-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .comp-label {
+      font-size: 11px;
+      color: var(--sp-text-muted);
+    }
+    .comp-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--sp-text);
+    }
+    .comp-value.highlight { color: var(--sp-green); }
+    #completion-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    #download-btn {
+      background: var(--sp-green);
+      color: #000000;
+      padding: 14px 32px;
+      border-radius: 9999px;
+      font-family: var(--sp-font);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, transform 0.1s;
+    }
+    #download-btn:hover { background: #1fdf64; transform: scale(1.04); }
+    #download-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+    #close-completion-btn {
+      background: transparent;
+      border: 1px solid var(--sp-border-2);
+      color: var(--sp-text-sub);
+      padding: 10px 16px;
+      border-radius: 9999px;
+      font-family: var(--sp-font);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #close-completion-btn:hover {
+      border-color: var(--sp-border-3);
+      color: var(--sp-text);
+    }
+
+    /* ── 반응형 (768px 이하: 패널 아래로) ── */
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+      }
+      #canvas-container {
+        width: 100%;
+        height: 55vw;
+        min-height: 280px;
+        max-height: 60vh;
+      }
+      #control-panel {
+        width: 100%;
+        height: auto;
+        border-left: none;
+        border-top: 1px solid var(--sp-border);
+        padding: 16px 16px 32px;
+      }
+      #completion-cards-row {
+        grid-template-columns: 1fr;
+      }
+      #completion-btns {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     캔버스 영역 (70%)
+══════════════════════════════════════════════════════ -->
+<div id="canvas-container">
+  <div id="upload-overlay">
+    <button id="upload-btn">이미지 업로드</button>
+    <p>패턴이나 무늬가 있는 사진을 골라보세요</p>
+    <input type="file" id="file-input" accept="image/*">
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     컨트롤 패널 (30%)
+══════════════════════════════════════════════════════ -->
+<div id="control-panel">
+  <div id="app-title">수학 비트 메이커</div>
+
+  <div id="stage-tabs">
+    <button class="tab-btn active" data-stage="1">1단계<br>대칭</button>
+    <button class="tab-btn"        data-stage="2">2단계<br>반복패턴</button>
+    <button class="tab-btn"        data-stage="3">3단계<br>자기닮음</button>
+  </div>
+
+  <div id="dashboard">
+    <div class="dash-row">
+      <span class="dash-label">BPM</span>
+      <span class="dash-value" id="dash-bpm">100</span>
+    </div>
+    <div class="dash-row">
+      <span class="dash-label">대칭</span>
+      <span class="dash-value" id="dash-sym">—</span>
+    </div>
+    <div class="dash-row">
+      <span class="dash-label">반복 패턴</span>
+      <span class="dash-value" id="dash-sticker">—</span>
+    </div>
+    <div class="dash-row">
+      <span class="dash-label">닮음비</span>
+      <span class="dash-value" id="dash-ratio">—</span>
+    </div>
+  </div>
+
+  <div id="stage-desc">이미지를 업로드하면 시작할 수 있어요!</div>
+
+  <button class="action-btn" id="play-btn">▶ 재생</button>
+  <button class="action-btn" id="detect-btn" style="display:none;">대칭 판별하기</button>
+  <button class="action-btn" id="finish-btn" style="display:none;">비트 완성!</button>
+  <button class="action-btn" id="reset-btn">↺ 초기화</button>
+</div>
+
+<!-- 완료 오버레이 -->
+<div id="completion-overlay">
+  <div id="completion-card">
+    <h2>비트 완성!</h2>
+    <div id="completion-cards-row">
+      <!-- 왼쪽: 수학 분석 -->
+      <div class="comp-card">
+        <div class="comp-card-title">수학 분석</div>
+        <div class="comp-row">
+          <span class="comp-label">대칭</span>
+          <span class="comp-value" id="comp-sym">—</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">반복 패턴</span>
+          <span class="comp-value" id="comp-sticker">—</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">닮음비</span>
+          <span class="comp-value" id="comp-ratio">—</span>
+        </div>
+      </div>
+      <!-- 오른쪽: 음악 변환 -->
+      <div class="comp-card">
+        <div class="comp-card-title">음악 변환</div>
+        <div class="comp-row">
+          <span class="comp-label">스네어</span>
+          <span class="comp-value highlight" id="comp-snare">—</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">BPM / 하이햇</span>
+          <span class="comp-value highlight" id="comp-hihat">—</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">킥 톤</span>
+          <span class="comp-value highlight" id="comp-kick">—</span>
+        </div>
+      </div>
+    </div>
+    <div id="completion-btns">
+      <button id="download-btn">⬇ 음원 다운로드</button>
+      <button id="close-completion-btn">계속 탐색하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     JavaScript
+══════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ============================================================
+// [CONFIG]
+// ============================================================
+const CONFIG = {
+  SAMPLE_MODE: 'synth',           // 'synth' | 'file'  ← 한 곳만 바꾸면 전환
+  FILE_SAMPLES: {
+    kick:  'kick.mp3',
+    snare: 'snare.mp3',
+    hihat: 'hihat.mp3',
+  },
+  SYM_THRESHOLD: 0.13,            // 이미지 너비 대비 대칭 오차 임계값 (bijective 기준으로 완화)
+  MIN_POINTS:    3,               // 대칭 판별 최소 점 개수
+};
+
+// ============================================================
+// [STATE]
+// ============================================================
+const State = {
+  currentStage: 1,
+  uploadedImage: null,
+  isPlaying: false,
+
+  stage1: {
+    dragging: 0,          // 0=없음 1=첫번째드래그 2=두번째드래그
+    dragStart: null,      // {x,y}
+    dragCurrent: null,    // {x,y}
+    firstLine: null,      // {x1,y1,x2,y2,len}
+    secondLine: null,     // {x1,y1,x2,y2,len}
+    ratio: null,
+    done: false,
+  },
+
+  stage2: {
+    points: [],           // [{x,y}]
+    symmetryType: null,   // 'line' | 'point' | null
+    lineAxis: null,       // {centroid:{x,y}, dir:{x,y}}
+    ptCenter: null,       // {x,y}
+    confidence: 0,
+    avgDistance: 0,
+    done: false,
+  },
+
+  stage3: {
+    template: null,       // {w,h,category:'large'|'mid'|'small'} — 첫 드래그로 확정
+    stickers: [],         // [{x,y,w,h}]
+    stickerCategory: null,
+    bpm: 100,
+    done: false,
+    dragging: false,      // 템플릿 드래그 중
+    dragStart: null,      // {x,y}
+    dragCurrent: null,    // {x,y}
+  },
+};
+
+function resetStage(n) {
+  // 탭1=대칭(stage2), 탭2=반복패턴(stage3), 탭3=자기닮음(stage1)
+  if (n === 1) {
+    Object.assign(State.stage2, {
+      points:[], symmetryType:null, lineAxis:null, ptCenter:null,
+      confidence:0, avgDistance:0, done:false,
+    });
+    AudioEngine.resetAudioStage2();
+  } else if (n === 2) {
+    Object.assign(State.stage3, {
+      template:null, stickers:[], stickerCategory:null, bpm:100, done:false,
+      dragging:false, dragStart:null, dragCurrent:null,
+    });
+    AudioEngine.resetAudioStage3();
+  } else if (n === 3) {
+    Object.assign(State.stage1, {
+      dragging:0, dragStart:null, dragCurrent:null,
+      firstLine:null, secondLine:null, ratio:null, done:false,
+    });
+    AudioEngine.resetAudioStage1();
+  }
+}
+
+// ============================================================
+// [AUDIO]  Tone.js オーディオエンジン
+// ============================================================
+const AudioEngine = (() => {
+  let ready = false;
+
+  // 악기
+  let kickSynth, snareSynth, hihatSynth, snareReverb;
+
+  // 시퀀서
+  let kickSeq = null, snareSeq = null, hihatSeq = null;
+
+  // 헬퍼: MIDI → Hz
+  function midiToHz(midi) {
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  // ── 악기 생성 ──
+  function buildInstruments() {
+    // 킥 (MembraneSynth)
+    kickSynth = new Tone.MembraneSynth({
+      pitchDecay: 0.09,
+      octaves: 6,
+      envelope: { attack: 0.001, decay: 0.28, sustain: 0, release: 0.1 },
+    }).toDestination();
+    kickSynth.volume.value = 0;
+
+    // 스네어 전용 리버브 (직렬 연결)
+    snareReverb = new Tone.Reverb({ decay: 1.2, wet: 0.0 });
+    snareReverb.toDestination();
+
+    // 스네어 (NoiseSynth) → Reverb
+    snareSynth = new Tone.NoiseSynth({
+      noise: { type: 'white' },
+      envelope: { attack: 0.002, decay: 0.14, sustain: 0, release: 0.05 },
+    }).connect(snareReverb);
+    snareSynth.volume.value = -18;
+
+    // 하이햇 (MetalSynth)
+    hihatSynth = new Tone.MetalSynth({
+      frequency: 420,
+      envelope: { attack: 0.001, decay: 0.04, release: 0.01 },
+      harmonicity: 5.1,
+      modulationIndex: 32,
+      resonance: 4000,
+      octaves: 1.5,
+    }).toDestination();
+    hihatSynth.volume.value = -16;
+  }
+
+  // ── 킥 시퀀서 ──
+  function _setKickSeq(pattern) {
+    if (kickSeq) { try { kickSeq.stop(); kickSeq.dispose(); } catch(e){} kickSeq = null; }
+    kickSeq = new Tone.Sequence((time, val) => {
+      if (!val) return;
+      kickSynth.triggerAttackRelease('C1', '8n', time);
+    }, pattern, '16n');
+    kickSeq.loop = true;
+    kickSeq.start(0);
+  }
+
+  // ── 스네어 시퀀서 ──
+  function _setSnareSeq(pattern, subdivision) {
+    if (snareSeq) { try { snareSeq.stop(); snareSeq.dispose(); } catch(e){} snareSeq = null; }
+    if (!pattern || !pattern.length) return;
+    snareSeq = new Tone.Sequence((time, val) => {
+      if (!val) return;
+      snareSynth.triggerAttackRelease('16n', time);
+    }, pattern, subdivision || '16n');
+    snareSeq.loop = true;
+    snareSeq.start(0);
+  }
+
+  // ── 하이햇 시퀀서 ──
+  function _setHihatSeq(pattern, subdivision) {
+    if (hihatSeq) { try { hihatSeq.stop(); hihatSeq.dispose(); } catch(e){} hihatSeq = null; }
+    if (!pattern || !pattern.length) return;
+    hihatSeq = new Tone.Sequence((time, val) => {
+      if (!val) return;
+      hihatSynth.triggerAttackRelease('32n', time);
+    }, pattern, subdivision || '16n');
+    hihatSeq.loop = true;
+    hihatSeq.start(0);
+  }
+
+  // ── 초기화 ──
+  async function init() {
+    if (ready) return;
+    await Tone.start();
+    Tone.Transport.bpm.value = 100;
+    buildInstruments();
+    await snareReverb.ready;
+    // 기본 킥 (정박 4분음표)
+    _setKickSeq([1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0]);
+    ready = true;
+  }
+
+  function play() {
+    if (!ready) return;
+    Tone.Transport.start();
+  }
+
+  function stop() {
+    Tone.Transport.stop();
+  }
+
+  function setBPM(bpm) {
+    Tone.Transport.bpm.rampTo(bpm, 0.4);
+  }
+
+  // ── 1단계 적용 (킥 음색만 ratio에 따라 변화, 패턴은 5-hit 고정) ──
+  function applyStage1(ratio) {
+    // 패턴: 항상 5-hit 저지클럽 고정 (스텝 1,5,9,12,15)
+    _setKickSeq([1,0,0,0, 1,0,0,0, 1,0,0,1, 0,0,1,0]);
+
+    // 음색: ratio 작을수록 경쾌(snap), 클수록 묵직(boom) — 연속적으로 변화
+    // pitchDecay: 0→0.04(짧고 snap), 1→0.22(길고 boom)
+    kickSynth.pitchDecay = 0.04 + ratio * 0.18;
+    // octaves: 0→10oct(고음역 넓음, 경쾌), 1→3oct(저음역 좁음, 묵직)
+    kickSynth.octaves    = 10 - ratio * 7;
+  }
+
+  // ── 2단계 적용 (스네어 + 리버브) ──
+  function applyStage2(symmetryType, avgDistance, imgWidth, pointCount) {
+    // 리버브 wet: avgDistance 커질수록 높음
+    const wet = Math.min(avgDistance / (imgWidth * 0.35), 0.88);
+    snareReverb.wet.rampTo(wet, 0.3);
+
+    // 스네어 볼륨: 충분히 들리도록 고정 (-4dB)
+    snareSynth.volume.rampTo(-4, 0.3);
+
+    if (symmetryType === 'line') {
+      snareSynth.envelope.attack = 0.001;
+      snareSynth.envelope.decay  = 0.14;
+      _setSnareSeq([0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0], '16n');
+    } else {
+      // 점대칭 or 판별 불명: 엇박자 + "리버스" 느낌 (느린 어택)
+      snareSynth.envelope.attack = 0.06;
+      snareSynth.envelope.decay  = 0.35;
+      snareReverb.wet.rampTo(Math.max(wet, 0.5), 0.3);
+      _setSnareSeq([0,0,1,0, 0,1,0,0, 1,0,0,0, 0,1,0,0], '16n');
+    }
+  }
+
+  // ── 3단계 적용 (하이햇 + BPM) — 스티커 개수 기준 2개마다 단계 상승 ──
+  function applyStage3(count, dominantSize) {
+    const bpm = count >= 8 ? 155 : count >= 6 ? 145 : count >= 4 ? 130 : count >= 2 ? 115 : 100;
+    setBPM(bpm);
+    State.stage3.bpm = bpm;
+
+    if (count < 2) {
+      // 0–1개: 하이햇 없음 (킥만)
+      _setHihatSeq(null);
+    } else if (count < 4) {
+      // 2–3개: 8분음표 직선
+      _setHihatSeq([1,1,1,1, 1,1,1,1], '8n');
+    } else if (count < 6) {
+      // 4–5개: 8비트 셔플 ("칙-치")
+      _setHihatSeq([1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], '16n');
+    } else if (count < 8) {
+      // 6–7개: 3연음 ("치치치/치치치")
+      _setHihatSeq([1,1,1, 1,1,1, 1,1,1, 1,1,1], '8t');
+    } else {
+      // 8개: 6연음 롤 폭발
+      _setHihatSeq([1,1,1,1,1,1, 1,1,1,1,1,1, 1,1,1,1,1,1, 1,1,1,1,1,1], '32t');
+    }
+  }
+
+  // ── 오프라인 렌더 (WAV 다운로드용) ──
+  async function renderOfflineWAV(durationSec) {
+    const bpm = State.stage3.bpm || 100;
+    const s1  = State.stage1;
+    const s2  = State.stage2;
+    const s3  = State.stage3;
+
+    const buffer = await Tone.Offline(async (offlineCtx) => {
+      // ※ 오프라인 컨텍스트 전용 transport 사용
+      const transport = offlineCtx.transport;
+      transport.bpm.value = bpm;
+
+      // ── 킥 ──
+      const kSynth = new Tone.MembraneSynth({
+        pitchDecay: s1.ratio !== null ? 0.04 + s1.ratio * 0.18 : 0.09,
+        octaves:    s1.ratio !== null ? 10 - s1.ratio * 7       : 6,
+        envelope: { attack:0.001, decay:0.28, sustain:0, release:0.1 },
+      }).toDestination();
+      const kPat = s1.done
+        ? [1,0,0,0, 1,0,0,0, 1,0,0,1, 0,0,1,0]   // 5-hit 저지클럽
+        : [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0];   // 정박
+      const kSeq = new Tone.Sequence((time, val) => {
+        if (!val) return;
+        kSynth.triggerAttackRelease('C1', '8n', time);
+      }, kPat, '16n');
+      kSeq.loop = true; kSeq.start(0);
+
+      // ── 스네어 ──
+      const sRev = new Tone.Reverb({ decay:1.2, wet: s2.done ? 0.35 : 0 });
+      sRev.toDestination();
+      await sRev.ready;
+      const sSynth = new Tone.NoiseSynth({
+        noise: { type:'white' },
+        envelope: {
+          attack:  s2.symmetryType === 'point' ? 0.06 : 0.002,
+          decay:   s2.symmetryType === 'point' ? 0.35 : 0.14,
+          sustain: 0, release: 0.05,
+        },
+      }).connect(sRev);
+      sSynth.volume.value = s2.done ? -10 : -40;
+
+      if (s2.done && s2.symmetryType) {
+        const sPat = s2.symmetryType === 'line'
+          ? [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0]
+          : [0,0,1,0, 0,1,0,0, 1,0,0,0, 0,1,0,0];
+        const sSeq = new Tone.Sequence((time, val) => {
+          if (!val) return; sSynth.triggerAttackRelease('16n', time);
+        }, sPat, '16n');
+        sSeq.loop = true; sSeq.start(0);
+      }
+
+      // ── 하이햇 (스티커 개수 기준, 실시간과 동일 로직) ──
+      const hCount = s3.stickers.length;
+      if (hCount >= 2) {
+        const hSynth = new Tone.MetalSynth({
+          frequency:420, harmonicity:5.1, modulationIndex:32,
+          resonance:4000, octaves:1.5,
+          envelope:{ attack:0.001, decay:0.04, release:0.01 },
+        }).toDestination();
+        hSynth.volume.value = -10;
+        let hPat, hSub;
+        if (hCount >= 8)      { hPat=[1,1,1,1,1,1, 1,1,1,1,1,1, 1,1,1,1,1,1, 1,1,1,1,1,1]; hSub='32t'; }
+        else if (hCount >= 6) { hPat=[1,1,1, 1,1,1, 1,1,1, 1,1,1]; hSub='8t'; }
+        else if (hCount >= 4) { hPat=[1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0]; hSub='16n'; }
+        else                  { hPat=[1,1,1,1, 1,1,1,1]; hSub='8n'; }
+        const hSeq = new Tone.Sequence((time, val) => {
+          if (!val) return; hSynth.triggerAttackRelease('32n', time);
+        }, hPat, hSub);
+        hSeq.loop = true; hSeq.start(0);
+      }
+
+      transport.start();
+    }, durationSec);
+
+    return buffer.get();
+  }
+
+  // ── 단계별 오디오 리셋 ──
+  function resetAudioStage1() {
+    if (!ready) return;
+    kickSynth.pitchDecay = 0.09;
+    kickSynth.octaves    = 6;
+    _setKickSeq([1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0]); // 정박 4분음표로 복귀
+  }
+
+  function resetAudioStage2() {
+    if (!ready) return;
+    if (snareSeq) { try { snareSeq.stop(); snareSeq.dispose(); } catch(e){} snareSeq = null; }
+    snareReverb.wet.rampTo(0, 0.3);
+    snareSynth.volume.rampTo(-18, 0.3);
+    snareSynth.envelope.attack = 0.002;
+    snareSynth.envelope.decay  = 0.14;
+  }
+
+  function resetAudioStage3() {
+    if (!ready) return;
+    if (hihatSeq) { try { hihatSeq.stop(); hihatSeq.dispose(); } catch(e){} hihatSeq = null; }
+    setBPM(100);
+  }
+
+  return {
+    init, play, stop, setBPM,
+    applyStage1, applyStage2, applyStage3,
+    resetAudioStage1, resetAudioStage2, resetAudioStage3,
+    renderOfflineWAV,
+  };
+})();
+
+// ============================================================
+// [PARTICLES]
+// ============================================================
+const Particles = {
+  list: [],
+
+  burst(p5inst, x, y, count = 65) {
+    for (let i = 0; i < count; i++) {
+      const angle = p5inst.random(p5inst.TWO_PI);
+      const speed = p5inst.random(3, 10);
+      this.list.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - p5inst.random(1, 3),
+        life: 1.0,
+        decay: p5inst.random(0.012, 0.03),
+        size: p5inst.random(5, 14),
+        hue:  p5inst.random(360),
+      });
+    }
+  },
+
+  update(p5inst) {
+    this.list = this.list.filter(pt => pt.life > 0);
+    p5inst.colorMode(p5inst.HSB, 360, 100, 100, 1.0);
+    for (const pt of this.list) {
+      pt.x  += pt.vx;
+      pt.y  += pt.vy;
+      pt.vy += 0.25;
+      pt.vx *= 0.97;
+      pt.life -= pt.decay;
+      p5inst.noStroke();
+      p5inst.fill(pt.hue, 85, 100, pt.life);
+      p5inst.ellipse(pt.x, pt.y, pt.size * pt.life, pt.size * pt.life);
+    }
+    p5inst.colorMode(p5inst.RGB, 255);
+  },
+};
+
+// ============================================================
+// [STAGE1] — 자기닮음 (킥 드럼)
+// ============================================================
+const Stage1 = {
+  draw(p, imgX, imgY, imgW, imgH) {
+    const s = State.stage1;
+
+    // 첫 번째 박스 드래그 중
+    if (s.dragging === 1 && s.dragStart && s.dragCurrent) {
+      this._drawBox(p, s.dragStart, s.dragCurrent, [100,150,255], '드래그 중…');
+    }
+
+    // 첫 번째 선 확정 (파란 박스)
+    if (s.firstLine) {
+      const fl = s.firstLine;
+      this._drawBoxFromLine(p, fl, [100,150,255,80], [100,150,255], '기준 모양');
+    }
+
+    // 두 번째 드래그 중 (빨간 박스 실시간 스케일)
+    if (s.dragging === 2 && s.dragStart && s.dragCurrent && s.firstLine) {
+      this._drawSecondLive(p, s.dragStart, s.dragCurrent, s.firstLine);
+    }
+
+    // 두 번째 선 확정 (비율 잠금 박스)
+    if (s.secondLine && s.firstLine) {
+      const sl   = s.secondLine;
+      const ratio = sl.len / s.firstLine.len;
+      const x = sl.signX >= 0 ? sl.x1 : sl.x1 - sl.w;
+      const y = sl.signY >= 0 ? sl.y1 : sl.y1 - sl.h;
+      p.fill(255, 80, 80, 85);
+      p.stroke(255, 100, 100);
+      p.strokeWeight(2);
+      p.rectMode(p.CORNER);
+      p.rect(x, y, sl.w, sl.h, 6);
+      p.noStroke();
+      p.fill(255, 80, 80, 240);
+      p.ellipse(sl.x1, sl.y1, 8, 8);
+      p.fill(255, 140, 100);
+      p.textSize(13);
+      p.textAlign(p.CENTER);
+      p.text(`닮음비: ${ratio.toFixed(2)}`, x + sl.w / 2, y - 10);
+    }
+
+    // 힌트 텍스트
+    if (!State.uploadedImage) return;
+    p.noStroke();
+    p.textAlign(p.CENTER);
+    if (!s.firstLine && s.dragging === 0) {
+      p.fill(179, 179, 179, 200);
+      p.textSize(13);
+      p.text('① 기준 모양(큰 조각) 위에서 드래그하세요', imgX + imgW/2, imgY + imgH + 26);
+    } else if (s.firstLine && !s.secondLine && s.dragging === 0) {
+      p.fill(179, 179, 179, 200);
+      p.textSize(13);
+      p.text('② 닮은 모양(작은 조각) 위에서 드래그하세요', imgX + imgW/2, imgY + imgH + 26);
+    } else if (s.done) {
+      p.fill(30, 215, 96, 220);
+      p.textSize(14);
+      p.text('완료! 비트 완성 버튼을 눌러보세요', imgX + imgW/2, imgY + imgH + 26);
+    }
+  },
+
+  // 시작점 고정 코너 박스 (드래그 중)
+  _drawBox(p, start, current, col, label) {
+    const x = Math.min(start.x, current.x);
+    const y = Math.min(start.y, current.y);
+    const w = Math.abs(current.x - start.x);
+    const h = Math.abs(current.y - start.y);
+    p.fill(col[0], col[1], col[2], 65);
+    p.stroke(col[0], col[1], col[2]);
+    p.strokeWeight(2);
+    p.rectMode(p.CORNER);
+    p.rect(x, y, w, h, 6);
+    // 고정 시작 코너 표시
+    p.noStroke();
+    p.fill(col[0], col[1], col[2], 240);
+    p.ellipse(start.x, start.y, 10, 10);
+    p.fill(col[0], col[1], col[2]);
+    p.textSize(12);
+    p.textAlign(p.CENTER);
+    p.text(label, (start.x + current.x) / 2, y - 10);
+  },
+
+  // 확정된 첫 번째 박스
+  _drawBoxFromLine(p, line, fillCol, strokeCol, label) {
+    const x = Math.min(line.x1, line.x2);
+    const y = Math.min(line.y1, line.y2);
+    const w = Math.abs(line.x2 - line.x1);
+    const h = Math.abs(line.y2 - line.y1);
+    p.fill(fillCol[0], fillCol[1], fillCol[2], fillCol[3] || 80);
+    p.stroke(strokeCol[0], strokeCol[1], strokeCol[2]);
+    p.strokeWeight(2);
+    p.rectMode(p.CORNER);
+    p.rect(x, y, w, h, 6);
+    p.noStroke();
+    p.fill(strokeCol[0], strokeCol[1], strokeCol[2], 240);
+    p.ellipse(line.x1, line.y1, 8, 8);
+    p.fill(strokeCol[0], strokeCol[1], strokeCol[2]);
+    p.textSize(12);
+    p.textAlign(p.CENTER);
+    p.text(label, (line.x1 + line.x2) / 2, y - 10);
+  },
+
+  // 두 번째 박스 (실시간 — 첫 번째 박스 비율 잠금 + 스케일만 조정)
+  _drawSecondLive(p, start, current, firstLine) {
+    const dx  = current.x - start.x, dy = current.y - start.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const ratio = len / firstLine.len;
+    const signX = dx >= 0 ? 1 : -1;
+    const signY = dy >= 0 ? 1 : -1;
+    // 첫 번째 박스 가로세로 비율을 유지하며 scale만 변경
+    const w = firstLine.w * ratio;
+    const h = firstLine.h * ratio;
+    const x = signX >= 0 ? start.x : start.x - w;
+    const y = signY >= 0 ? start.y : start.y - h;
+    p.fill(255, 80, 80, 85);
+    p.stroke(255, 100, 100);
+    p.strokeWeight(2);
+    p.rectMode(p.CORNER);
+    p.rect(x, y, w, h, 6);
+    p.noStroke();
+    p.fill(255, 80, 80, 240);
+    p.ellipse(start.x, start.y, 10, 10);
+    p.fill(255, 140, 100);
+    p.textSize(13);
+    p.textAlign(p.CENTER);
+    p.text(`닮음비: ${ratio.toFixed(2)}`, x + w / 2, y - 10);
+  },
+
+  onMousePressed(p) {
+    const s = State.stage1;
+    if (s.done) return;
+    if (s.dragging === 0 && !s.firstLine) {
+      s.dragging = 1;
+      s.dragStart   = { x: p.mouseX, y: p.mouseY };
+      s.dragCurrent = { x: p.mouseX, y: p.mouseY };
+    } else if (s.dragging === 0 && s.firstLine && !s.secondLine) {
+      s.dragging = 2;
+      s.dragStart   = { x: p.mouseX, y: p.mouseY };
+      s.dragCurrent = { x: p.mouseX, y: p.mouseY };
+    }
+  },
+
+  onMouseDragged(p) {
+    const s = State.stage1;
+    if (s.dragging > 0 && s.dragStart) {
+      s.dragCurrent = { x: p.mouseX, y: p.mouseY };
+    }
+  },
+
+  onMouseReleased(p) {
+    const s = State.stage1;
+    if (!s.dragStart || !s.dragCurrent) return;
+    const dx = s.dragCurrent.x - s.dragStart.x;
+    const dy = s.dragCurrent.y - s.dragStart.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+
+    if (s.dragging === 1) {
+      if (len > 10) {
+        // w, h 저장 → 두 번째 드래그 비율 잠금에 사용
+        s.firstLine = {
+          x1: s.dragStart.x,   y1: s.dragStart.y,
+          x2: s.dragCurrent.x, y2: s.dragCurrent.y,
+          len,
+          w: Math.abs(s.dragCurrent.x - s.dragStart.x),
+          h: Math.abs(s.dragCurrent.y - s.dragStart.y),
+        };
+      }
+      s.dragging = 0; s.dragStart = null; s.dragCurrent = null;
+
+    } else if (s.dragging === 2 && s.firstLine) {
+      if (len > 5) {
+        const ratio  = len / s.firstLine.len;
+        const signX  = dx >= 0 ? 1 : -1;
+        const signY  = dy >= 0 ? 1 : -1;
+        // 비율 잠금된 두 번째 박스 크기
+        const boxW   = s.firstLine.w * ratio;
+        const boxH   = s.firstLine.h * ratio;
+        s.secondLine = {
+          x1: s.dragStart.x, y1: s.dragStart.y,
+          x2: s.dragCurrent.x, y2: s.dragCurrent.y,
+          len, signX, signY, w: boxW, h: boxH,
+        };
+        s.ratio = ratio;
+        s.done  = true;
+        AudioEngine.applyStage1(ratio);
+        // 파티클 (비율 잠금 박스 중앙)
+        const cx = s.dragStart.x + signX * boxW / 2;
+        const cy = s.dragStart.y + signY * boxH / 2;
+        Particles.burst(p, cx, cy, 70);
+      }
+      s.dragging = 0; s.dragStart = null; s.dragCurrent = null;
+      updateDashboard();
+    }
+  },
+};
+
+// ============================================================
+// [STAGE2] — 대칭 판별 (스네어)
+// ============================================================
+const Stage2 = {
+  // PCA: 점들의 주축 계산
+  _pca(pts) {
+    const n = pts.length;
+    const mx = pts.reduce((s,p)=>s+p.x,0)/n;
+    const my = pts.reduce((s,p)=>s+p.y,0)/n;
+    let sxx=0, sxy=0, syy=0;
+    for (const p of pts) {
+      const dx=p.x-mx, dy=p.y-my;
+      sxx+=dx*dx; sxy+=dx*dy; syy+=dy*dy;
+    }
+    const diff = sxx - syy;
+    const disc = Math.sqrt(diff*diff + 4*sxy*sxy);
+    const lambda1 = ((sxx+syy)+disc)/2;
+    let ex = lambda1-syy, ey = sxy;
+    const mag = Math.sqrt(ex*ex+ey*ey);
+    if (mag < 1e-10) {
+      ex = sxx >= syy ? 1 : 0;
+      ey = sxx >= syy ? 0 : 1;
+    } else {
+      ex /= mag; ey /= mag;
+    }
+    return { centroid:{x:mx,y:my}, dir:{x:ex, y:ey} };
+  },
+
+  // 전체 점을 축에 대해 선반사
+  _reflectLine(pts, centroid, dir) {
+    return pts.map(p => {
+      const dx=p.x-centroid.x, dy=p.y-centroid.y;
+      const dot = dx*dir.x + dy*dir.y;
+      return { x: centroid.x + 2*dot*dir.x - dx,
+               y: centroid.y + 2*dot*dir.y - dy };
+    });
+  },
+
+  // 전체 점을 중심에 대해 점반사
+  _reflectPoint(pts, centroid) {
+    return pts.map(p => ({
+      x: 2*centroid.x - p.x,
+      y: 2*centroid.y - p.y,
+    }));
+  },
+
+  // Bijective(1:1) 최근접 매칭 — 같은 원점을 두 번 쓸 수 없음
+  _bijectiveResidual(originals, reflected) {
+    const used = new Array(originals.length).fill(false);
+    let total = 0;
+    for (const r of reflected) {
+      let minD = Infinity, minIdx = -1;
+      for (let i = 0; i < originals.length; i++) {
+        if (used[i]) continue;
+        const d = Math.hypot(originals[i].x - r.x, originals[i].y - r.y);
+        if (d < minD) { minD = d; minIdx = i; }
+      }
+      if (minIdx >= 0) { used[minIdx] = true; total += minD; }
+      else total += 1e6;
+    }
+    return total / reflected.length;
+  },
+
+  // 특정 축에 대한 선대칭 오차 (bijective)
+  _lineSymResidual(pts, centroid, dir) {
+    return this._bijectiveResidual(pts, this._reflectLine(pts, centroid, dir));
+  },
+
+  // 점대칭 오차 (bijective)
+  _pointSymResidual(pts, centroid) {
+    return this._bijectiveResidual(pts, this._reflectPoint(pts, centroid));
+  },
+
+  analyze(imgWidth) {
+    const s = State.stage2;
+    const pts = s.points;
+    if (pts.length < CONFIG.MIN_POINTS) {
+      s.symmetryType = null; s.confidence = 0; return;
+    }
+
+    const threshold = imgWidth * CONFIG.SYM_THRESHOLD;
+    const { centroid, dir } = this._pca(pts);
+    const perp = { x: -dir.y, y: dir.x };
+
+    // ── 선대칭 후보 축 수집 ──
+    const axes = [
+      { centroid, dir },        // PCA 주축
+      { centroid, dir: perp },  // PCA 수직축
+    ];
+
+    // 각 점 → 무게중심 방향 축
+    for (const p of pts) {
+      const dx=p.x-centroid.x, dy=p.y-centroid.y;
+      const m = Math.hypot(dx, dy);
+      if (m > 1e-10) axes.push({ centroid, dir:{x:dx/m, y:dy/m} });
+    }
+
+    // 점 쌍의 수직이등분선 (N ≤ 10일 때)
+    if (pts.length <= 10) {
+      for (let i=0; i<pts.length; i++) {
+        for (let j=i+1; j<pts.length; j++) {
+          const mx=(pts[i].x+pts[j].x)/2, my=(pts[i].y+pts[j].y)/2;
+          const dx=pts[j].x-pts[i].x, dy=pts[j].y-pts[i].y;
+          const m=Math.hypot(dx,dy);
+          if (m < 1e-10) continue;
+          axes.push({ centroid:{x:mx,y:my}, dir:{x:-dy/m, y:dx/m} });
+        }
+      }
+    }
+
+    // ── 최적 선대칭 축 탐색 ──
+    let bestLineRes = Infinity, bestAxis = null;
+    for (const ax of axes) {
+      const r = this._lineSymResidual(pts, ax.centroid, ax.dir);
+      if (r < bestLineRes) { bestLineRes = r; bestAxis = ax; }
+    }
+
+    // ── 점대칭 오차 ──
+    const pointRes = this._pointSymResidual(pts, centroid);
+
+    // ── 판정 ──
+    const linePasses  = bestLineRes  <= threshold;
+    const pointPasses = pointRes <= threshold;
+
+    if (linePasses && (!pointPasses || bestLineRes <= pointRes)) {
+      s.symmetryType = 'line';
+      s.lineAxis = bestAxis;
+      s.confidence = Math.max(0, 1 - bestLineRes/threshold);
+      let dSum = 0;
+      for (const p of pts) {
+        const dx=p.x-bestAxis.centroid.x, dy=p.y-bestAxis.centroid.y;
+        const dot = dx*bestAxis.dir.x + dy*bestAxis.dir.y;
+        dSum += Math.hypot(dx-dot*bestAxis.dir.x, dy-dot*bestAxis.dir.y);
+      }
+      s.avgDistance = dSum/pts.length;
+    } else if (pointPasses) {
+      s.symmetryType = 'point';
+      s.ptCenter = centroid;
+      s.confidence = Math.max(0, 1 - pointRes/threshold);
+      s.avgDistance = pointRes;
+    } else {
+      s.symmetryType = null;
+      const minRes = Math.min(bestLineRes, pointRes);
+      s.confidence = Math.max(0, 1 - minRes/(threshold*2));
+    }
+  },
+
+  draw(p, imgX, imgY, imgW, imgH) {
+    const s = State.stage2;
+
+    // 찍힌 점들
+    for (const pt of s.points) {
+      p.noStroke();
+      p.fill(255, 220, 50, 210);
+      p.ellipse(pt.x, pt.y, 11, 11);
+      p.fill(255);
+      p.ellipse(pt.x, pt.y, 4, 4);
+    }
+
+    const alpha = Math.round(s.confidence * 255);
+
+    // 선대칭 가이드라인
+    if (s.symmetryType === 'line' && s.lineAxis) {
+      const { centroid, dir } = s.lineAxis;
+      const ext = Math.max(imgW, imgH) * 0.8;
+      p.stroke(30, 215, 96, alpha);  // Spotify Green
+      p.strokeWeight(2 + s.confidence * 3);
+      p.line(
+        centroid.x - dir.x*ext, centroid.y - dir.y*ext,
+        centroid.x + dir.x*ext, centroid.y + dir.y*ext
+      );
+      // 수직 심볼
+      const perpX = -dir.y, perpY = dir.x;
+      p.stroke(30, 215, 96, alpha);
+      p.strokeWeight(2);
+      p.line(centroid.x, centroid.y,
+             centroid.x + perpX*18, centroid.y + perpY*18);
+      p.noStroke();
+      p.fill(30, 215, 96, alpha);
+      p.textSize(14);
+      p.textAlign(p.CENTER);
+      p.text('선대칭', centroid.x, centroid.y - 22);
+    }
+
+    // 점대칭 가이드라인
+    if (s.symmetryType === 'point' && s.ptCenter) {
+      const c = s.ptCenter;
+      p.stroke(83, 157, 245, alpha);  // Spotify Blue
+      p.strokeWeight(2);
+      p.noFill();
+      p.ellipse(c.x, c.y, 28, 28);
+      p.ellipse(c.x, c.y, 56, 56);
+      p.line(c.x-28, c.y, c.x+28, c.y);
+      p.line(c.x, c.y-28, c.x, c.y+28);
+      p.noStroke();
+      p.fill(83, 157, 245, alpha);
+      p.textSize(14);
+      p.textAlign(p.CENTER);
+      p.text('점대칭', c.x, c.y - 38);
+    }
+
+    // 신뢰도 바
+    if (s.points.length >= CONFIG.MIN_POINTS) {
+      const barY = imgY + imgH + 8;
+      p.noStroke();
+      p.fill(30, 30, 30);
+      p.rect(imgX, barY, imgW, 7, 4);
+      const barColor = s.symmetryType ? p.color(30,215,96) : p.color(179,179,179);
+      p.fill(barColor);
+      p.rect(imgX, barY, imgW * s.confidence, 7, 4);
+      p.fill(179, 179, 179);
+      p.noStroke();
+      p.textSize(11);
+      p.textAlign(p.LEFT);
+      p.text(`신뢰도 ${Math.round(s.confidence*100)}%`, imgX, barY+20);
+      p.textAlign(p.RIGHT);
+      p.text(`점 ${s.points.length}개`, imgX+imgW, barY+20);
+    }
+
+    // 힌트
+    p.noStroke();
+    p.textAlign(p.CENTER);
+    if (s.done) {
+      p.fill(30, 215, 96, 220); p.textSize(14);
+      p.text('완료! 3단계로 이동하세요', imgX+imgW/2, imgY+imgH+36);
+    } else if (s.points.length === 0) {
+      p.fill(179, 179, 179, 200); p.textSize(13);
+      p.text('대칭이라 생각하는 점들을 클릭하세요', imgX+imgW/2, imgY+imgH+32);
+    } else {
+      p.fill(179, 179, 179, 200); p.textSize(13);
+      p.text(`점 ${s.points.length}개 — 우측 [대칭 판별] 버튼을 누르세요`, imgX+imgW/2, imgY+imgH+32);
+    }
+  },
+
+  onMousePressed(p, imgX, imgY, imgW, imgH) {
+    const s = State.stage2;
+    // 이미지 영역 내 클릭인지 확인
+    if (p.mouseX < imgX || p.mouseX > imgX+imgW) return;
+    if (p.mouseY < imgY || p.mouseY > imgY+imgH) return;
+
+    s.points.push({ x: p.mouseX, y: p.mouseY });
+    // 판별은 버튼 클릭 시에만 수행 — 여기선 점 추가만
+    updateDashboard();
+  },
+
+  // 판별 버튼 클릭 시 외부에서 호출
+  detectAndApply(p, imgW) {
+    const s = State.stage2;
+    if (s.points.length < 1) return;
+    this.analyze(imgW);
+    // 판별 성공 여부와 관계없이 항상 오디오 적용
+    // 판별 실패 시 'line' 기본값으로 스네어 추가
+    const type = s.symmetryType || 'line';
+    s.done = true;
+    AudioEngine.applyStage2(type, s.avgDistance, imgW, s.points.length);
+    Particles.burst(p, p.width / 2, p.height / 2, 60);
+    updateDashboard();
+  },
+};
+
+// ============================================================
+// [STAGE3] — 반복 패턴 (하이햇 + BPM) — 템플릿 드래그 방식
+// ============================================================
+const Stage3 = {
+
+  // 스티커 추가 후 BPM/하이햇 재계산
+  _recalc(p) {
+    const s = State.stage3;
+    if (!s.template) return;
+    s.stickerCategory = s.template.category;
+    const count = s.stickers.length;
+    s.bpm = count >= 8 ? 155 : count >= 6 ? 145 : count >= 4 ? 130 : count >= 2 ? 115 : 100;
+    AudioEngine.applyStage3(count, s.stickerCategory);
+    updateDashboard();
+  },
+
+  onMousePressed(p) {
+    const s = State.stage3;
+    if (!s.template) {
+      // 첫 드래그 시작: 템플릿 크기 정의
+      s.dragging = true;
+      s.dragStart   = { x: p.mouseX, y: p.mouseY };
+      s.dragCurrent = { x: p.mouseX, y: p.mouseY };
+    } else {
+      // 템플릿 확정 후 클릭: 스티커 찍기 (최대 8개)
+      if (s.stickers.length >= 8) return;
+      s.stickers.push({ x: p.mouseX, y: p.mouseY,
+                        w: s.template.w, h: s.template.h });
+      this._recalc(p);
+      Particles.burst(p, p.mouseX, p.mouseY, 30);
+    }
+  },
+
+  onMouseDragged(p) {
+    const s = State.stage3;
+    if (s.dragging) {
+      s.dragCurrent = { x: p.mouseX, y: p.mouseY };
+    }
+  },
+
+  onMouseReleased(p) {
+    const s = State.stage3;
+    if (!s.dragging) return;
+    s.dragging = false;
+    const w = Math.abs(s.dragCurrent.x - s.dragStart.x);
+    const h = Math.abs(s.dragCurrent.y - s.dragStart.y);
+    const diag = Math.hypot(w, h);
+    s.dragStart = null; s.dragCurrent = null;
+    if (diag < 8) return; // 너무 작으면 무시
+    const category = diag > 100 ? 'large' : diag > 50 ? 'mid' : 'small';
+    s.template = { w, h, category };
+    updateDashboard();
+  },
+
+  draw(p) {
+    const s = State.stage3;
+
+    // 붙여진 스티커들
+    p.rectMode(p.CENTER);
+    for (const st of s.stickers) {
+      p.fill(30, 215, 96, 120);   // Spotify Green
+      p.stroke(30, 215, 96, 200);
+      p.strokeWeight(2);
+      p.rect(st.x, st.y, st.w, st.h, 6);
+    }
+    p.rectMode(p.CORNER);
+
+    // 첫 드래그 중: 템플릿 박스 미리보기
+    if (s.dragging && s.dragStart && s.dragCurrent) {
+      const x = Math.min(s.dragStart.x, s.dragCurrent.x);
+      const y = Math.min(s.dragStart.y, s.dragCurrent.y);
+      const w = Math.abs(s.dragCurrent.x - s.dragStart.x);
+      const h = Math.abs(s.dragCurrent.y - s.dragStart.y);
+      const diag = Math.hypot(w, h);
+      const catLabel = diag > 100 ? '대 → 3연음' : diag > 50 ? '중 → 8비트셔플' : '소 → 6연음';
+      p.fill(30, 215, 96, 40);
+      p.stroke(30, 215, 96, 200);
+      p.strokeWeight(2);
+      p.rect(x, y, w, h, 6);
+      p.noStroke(); p.fill(30, 215, 96, 220);
+      p.textSize(13); p.textAlign(p.CENTER, p.CENTER);
+      p.text(catLabel, x + w/2, y + h/2);
+    }
+
+    // 템플릿 확정 후: 마우스 위치에 고스트 미리보기
+    if (s.template && !s.dragging) {
+      p.fill(30, 215, 96, 30);
+      p.stroke(30, 215, 96, 100);
+      p.strokeWeight(1);
+      p.rectMode(p.CENTER);
+      p.rect(p.mouseX, p.mouseY, s.template.w, s.template.h, 6);
+      p.rectMode(p.CORNER);
+    }
+
+    // 힌트
+    p.noStroke(); p.textAlign(p.CENTER);
+    if (!s.template) {
+      p.fill(179, 179, 179, 200); p.textSize(13);
+      p.text('반복 패턴 한 칸 크기를 드래그해서 정하세요', p.width/2, p.height - 30);
+    } else if (s.stickers.length === 0) {
+      p.fill(179, 179, 179, 200); p.textSize(13);
+      p.text('반복 패턴이 있는 위치를 클릭해서 스티커를 붙여보세요', p.width/2, p.height - 30);
+    }
+  },
+};
+
+// ============================================================
+// [UI]
+// ============================================================
+function updateDashboard() {
+  const s1=State.stage1, s2=State.stage2, s3=State.stage3;
+  // 탭 순서: 1=대칭(s2), 2=반복패턴(s3), 3=자기닮음(s1)
+  document.getElementById('dash-bpm').textContent = s3.bpm || 100;
+  document.getElementById('dash-ratio').textContent =
+    s1.ratio !== null ? s1.ratio.toFixed(2) : '—';
+  document.getElementById('dash-sym').textContent =
+    s2.symmetryType === 'line'  ? '선대칭' :
+    s2.symmetryType === 'point' ? '점대칭' : '—';
+
+  // 반복 패턴: 스티커 개수만 표시
+  document.getElementById('dash-sticker').textContent =
+    s3.stickers.length > 0 ? `${s3.stickers.length}개` : '—';
+
+  // 탭 상태 업데이트 — done 매핑: 탭1=s2, 탭2=s3, 탭3=s1
+  const tabDoneMap = { 1: s2, 2: s3, 3: s1 };
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const n = parseInt(btn.dataset.stage);
+    btn.classList.remove('active','done');
+    if (n === State.currentStage) btn.classList.add('active');
+    if (tabDoneMap[n]?.done) btn.classList.add('done');
+  });
+
+  // 단계 설명 — 새 순서 기준
+  const descs = {
+    1: '대칭이라고 생각하는 점들을\n원하는 만큼 클릭하세요.\n\n다 찍었으면 [대칭 판별하기] 버튼!\n선대칭/점대칭에 따라 스네어가 달라져요',
+    2: '먼저 드래그로 반복 패턴 한 칸 크기를\n정해보세요!\n\n크기를 정한 뒤, 패턴 위치를\n클릭해서 스티커를 붙여보세요!\n\n스티커 수 → BPM / 크기 → 하이햇',
+    3: '기준 모양(큰 조각)을 드래그하고,\n닮은 모양(작은 조각)도 드래그해서\n닮음비를 찾아보세요!\n\n비율이 작을수록 킥이 경쾌해져요',
+  };
+  document.getElementById('stage-desc').textContent =
+    State.uploadedImage ? descs[State.currentStage] : '이미지를 업로드하면 시작할 수 있어요!';
+
+  // 대칭 판별 버튼: 탭1(대칭) + 이미지 있을 때만
+  document.getElementById('detect-btn').style.display =
+    (State.currentStage === 1 && !!State.uploadedImage) ? 'block' : 'none';
+
+  // 완료 버튼: 탭3(자기닮음) + 이미지 있을 때만
+  document.getElementById('finish-btn').style.display =
+    (State.currentStage === 3 && !!State.uploadedImage) ? 'block' : 'none';
+}
+
+function showCompletion() {
+  const s1=State.stage1, s2=State.stage2, s3=State.stage3;
+  const NA = '발견되지 않음';
+
+  // ── 왼쪽: 수학 분석 ──
+  document.getElementById('comp-sym').textContent =
+    s2.symmetryType === 'line'  ? '선대칭' :
+    s2.symmetryType === 'point' ? '점대칭' : NA;
+
+  document.getElementById('comp-sticker').textContent =
+    s3.stickers.length > 0 ? `${s3.stickers.length}개` : NA;
+
+  document.getElementById('comp-ratio').textContent =
+    s1.ratio !== null ? s1.ratio.toFixed(2) : NA;
+
+  // ── 오른쪽: 음악 변환 ──
+  // 스네어
+  const snareText =
+    !s2.done                    ? NA :
+    s2.symmetryType === 'line'  ? '클랩 스네어' :
+    s2.symmetryType === 'point' ? '리버스 스네어' : '엇박 스네어';
+  document.getElementById('comp-snare').textContent = snareText;
+
+  // BPM / 하이햇
+  const cnt = s3.stickers.length;
+  const hihatText =
+    cnt === 0 ? NA :
+    cnt < 2   ? `${s3.bpm} BPM / 하이햇 없음` :
+    cnt < 4   ? `${s3.bpm} BPM / 8분음표` :
+    cnt < 6   ? `${s3.bpm} BPM / 8비트 셔플` :
+    cnt < 8   ? `${s3.bpm} BPM / 3연음` :
+                `${s3.bpm} BPM / 6연음 롤`;
+  document.getElementById('comp-hihat').textContent = hihatText;
+
+  // 킥 톤
+  const kickText =
+    s1.ratio === null ? NA :
+    s1.ratio < 0.4   ? '경쾌한 킥' :
+    s1.ratio < 0.7   ? '중간 킥' : '묵직한 킥';
+  document.getElementById('comp-kick').textContent = kickText;
+
+  document.getElementById('completion-overlay').classList.add('visible');
+}
+
+// AudioBuffer → WAV Blob
+function audioBufferToWav(buffer) {
+  const numCh = buffer.numberOfChannels;
+  const sr    = buffer.sampleRate;
+  const len   = buffer.length * numCh * 2;
+  const ab    = new ArrayBuffer(44 + len);
+  const view  = new DataView(ab);
+  const ws    = (off, s) => { for (let i=0;i<s.length;i++) view.setUint8(off+i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); view.setUint32(4,36+len,true); ws(8,'WAVE');
+  ws(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,numCh,true); view.setUint32(24,sr,true);
+  view.setUint32(28,sr*numCh*2,true); view.setUint16(32,numCh*2,true);
+  view.setUint16(34,16,true); ws(36,'data'); view.setUint32(40,len,true);
+  let offset = 44;
+  for (let i=0;i<buffer.length;i++) {
+    for (let ch=0;ch<numCh;ch++) {
+      const s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+      view.setInt16(offset, s<0 ? s*0x8000 : s*0x7FFF, true);
+      offset += 2;
+    }
+  }
+  return new Blob([ab], { type:'audio/wav' });
+}
+
+// ============================================================
+// [P5] — 스케치 (인스턴스 모드)
+// ============================================================
+new p5(function(p) {
+  let imgX=0, imgY=0, imgW=0, imgH=0;
+
+  p.setup = function() {
+    const c = document.getElementById('canvas-container');
+    const cnv = p.createCanvas(c.offsetWidth, c.offsetHeight);
+    cnv.parent('canvas-container');
+    p.textFont('Arial');
+    p.rectMode(p.CORNER);
+  };
+
+  p.draw = function() {
+    p.background(18, 18, 18); // Spotify Base #121212
+
+    // 이미지 로딩 큐 처리
+    if (window._pendingImageURL) {
+      const url = window._pendingImageURL;
+      window._pendingImageURL = null;
+      p.loadImage(url, img => {
+        State.uploadedImage = img;
+        updateDashboard();
+      });
+    }
+
+    if (!State.uploadedImage) {
+      Particles.update(p);
+      return;
+    }
+
+    // 이미지 배치 (비율 유지)
+    const img   = State.uploadedImage;
+    const scale = Math.min((p.width*0.92)/img.width, (p.height*0.84)/img.height);
+    imgW = img.width  * scale;
+    imgH = img.height * scale;
+    imgX = (p.width  - imgW) / 2;
+    imgY = (p.height - imgH) / 2;
+    // 2단계 판별 버튼에서 사용할 수 있도록 전역 노출
+    window._p5Instance = p;
+    window._canvasImgW = imgW;
+    p.image(img, imgX, imgY, imgW, imgH);
+
+    // 이미지 테두리
+    p.noFill(); p.stroke(40,40,40); p.strokeWeight(1);
+    p.rect(imgX, imgY, imgW, imgH);
+
+    // 단계별 오버레이 — 탭1=대칭(Stage2), 탭2=반복패턴(Stage3), 탭3=자기닮음(Stage1)
+    p.push();
+    p.textAlign(p.CENTER);
+    if (State.currentStage === 1) Stage2.draw(p, imgX, imgY, imgW, imgH);
+    if (State.currentStage === 2) Stage3.draw(p);
+    if (State.currentStage === 3) Stage1.draw(p, imgX, imgY, imgW, imgH);
+    p.pop();
+
+    // 파티클
+    Particles.update(p);
+  };
+
+  p.mousePressed = function() {
+    if (!State.uploadedImage) return;
+    if (State.currentStage === 1) Stage2.onMousePressed(p, imgX, imgY, imgW, imgH);
+    if (State.currentStage === 2) Stage3.onMousePressed(p);
+    if (State.currentStage === 3) Stage1.onMousePressed(p);
+  };
+
+  p.mouseDragged = function() {
+    if (State.currentStage === 2) Stage3.onMouseDragged(p);
+    if (State.currentStage === 3) Stage1.onMouseDragged(p);
+  };
+
+  p.mouseReleased = function() {
+    if (State.currentStage === 2) Stage3.onMouseReleased(p);
+    if (State.currentStage === 3) Stage1.onMouseReleased(p);
+  };
+
+  p.windowResized = function() {
+    const c = document.getElementById('canvas-container');
+    p.resizeCanvas(c.offsetWidth, c.offsetHeight);
+  };
+});
+
+// ============================================================
+// [EVENTS]
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ── 이미지 업로드 ──
+  const uploadBtn = document.getElementById('upload-btn');
+  const fileInput = document.getElementById('file-input');
+  uploadBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await AudioEngine.init();  // ← Tone.start() 트리거 (브라우저 정책 준수)
+    const url = URL.createObjectURL(file);
+    window._pendingImageURL = url;
+    document.getElementById('upload-overlay').classList.add('hidden');
+    updateDashboard();
+    fileInput.value = '';
+  });
+
+  // ── 단계 탭 ──
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!State.uploadedImage) return;
+      const n = parseInt(btn.dataset.stage);
+      if (n === State.currentStage) return;
+
+      if (n < State.currentStage) {
+        // 역방향: 이동할 단계 초기화
+        resetStage(n);
+      }
+      State.currentStage = n;
+      updateDashboard();
+    });
+  });
+
+  // ── 재생/정지 ──
+  const playBtn = document.getElementById('play-btn');
+  playBtn.addEventListener('click', () => {
+    if (!State.uploadedImage) { alert('이미지를 먼저 업로드해주세요!'); return; }
+    if (!State.isPlaying) {
+      AudioEngine.play();
+      State.isPlaying = true;
+      playBtn.textContent = '⏹ 정지';
+    } else {
+      AudioEngine.stop();
+      State.isPlaying = false;
+      playBtn.textContent = '▶ 재생';
+    }
+  });
+
+  // ── 현재 단계 초기화 ──
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    resetStage(State.currentStage);
+    updateDashboard();
+  });
+
+  // ── 완료 팝업 닫기 ──
+  // 대칭 판별 버튼
+  document.getElementById('detect-btn').addEventListener('click', () => {
+    const p   = window._p5Instance;
+    const imgW = window._canvasImgW || 500;
+    if (p) Stage2.detectAndApply(p, imgW);
+  });
+
+  // 완료 버튼
+  document.getElementById('finish-btn').addEventListener('click', () => {
+    showCompletion();
+  });
+
+  document.getElementById('close-completion-btn').addEventListener('click', () => {
+    document.getElementById('completion-overlay').classList.remove('visible');
+  });
+
+  // ── 음원 다운로드 ──
+  document.getElementById('download-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('download-btn');
+    btn.textContent = '⏳ 렌더링 중... (약 16초)';
+    btn.disabled = true;
+    try {
+      const audioBuffer = await AudioEngine.renderOfflineWAV(16);
+      const blob = audioBufferToWav(audioBuffer);
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = 'math-beat.wav';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('WAV 렌더링 오류:', err);
+      alert('음원 생성 중 오류가 발생했습니다. 콘솔을 확인해주세요.');
+    } finally {
+      btn.textContent = '⬇ 음원 다운로드 (WAV)';
+      btn.disabled = false;
+    }
+  });
+
+  updateDashboard();
+});
+</script>
+</body>
+</html>

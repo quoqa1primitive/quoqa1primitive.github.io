@@ -1,0 +1,8 @@
+*.pdf
+*.png
+*.pptx
+*.js
+*.json
+node_modules/
+docs/
+*.md
