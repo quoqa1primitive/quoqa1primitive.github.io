@@ -1647,10 +1647,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.getElementById('file-input');
   uploadBtn.addEventListener('click', () => fileInput.click());
 
-  fileInput.addEventListener('change', async (e) => {
+  fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    await AudioEngine.init();  // ← Tone.start() 트리거 (브라우저 정책 준수)
+    // 파일 읽기만 수행 (Tone.start()는 재생 버튼에서 처리)
     const url = URL.createObjectURL(file);
     window._pendingImageURL = url;
     document.getElementById('upload-overlay').classList.add('hidden');
@@ -1676,9 +1676,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 재생/정지 ──
   const playBtn = document.getElementById('play-btn');
-  playBtn.addEventListener('click', () => {
+  playBtn.addEventListener('click', async () => {
     if (!State.uploadedImage) { alert('이미지를 먼저 업로드해주세요!'); return; }
     if (!State.isPlaying) {
+      await AudioEngine.init();  // Tone.start() — 재생 버튼이 명확한 user gesture
       AudioEngine.play();
       State.isPlaying = true;
       playBtn.textContent = '⏹ 정지';
