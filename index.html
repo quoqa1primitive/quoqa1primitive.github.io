@@ -1725,16 +1725,16 @@ new p5(function(p) {
 
   p.touchMoved = function() {
     if (!State.uploadedImage) return;
-    if (State.currentStage === 2) Stage3.onMouseDragged(p);
-    if (State.currentStage === 3) Stage1.onMouseDragged(p);
-    return false;
+    if (State.currentStage === 2) { Stage3.onMouseDragged(p); return false; }
+    if (State.currentStage === 3) { Stage1.onMouseDragged(p); return false; }
+    // stage 1, 4: return undefined → preventDefault 호출 안 함 → 버튼 클릭 허용
   };
 
   p.touchEnded = function() {
     if (!State.uploadedImage) return;
-    if (State.currentStage === 2) Stage3.onMouseReleased(p);
-    if (State.currentStage === 3) Stage1.onMouseReleased(p);
-    return false;
+    if (State.currentStage === 2) { Stage3.onMouseReleased(p); return false; }
+    if (State.currentStage === 3) { Stage1.onMouseReleased(p); return false; }
+    // stage 1, 4: return undefined → click 이벤트 허용 (대칭 판별 버튼 등)
   };
 
   p.windowResized = function() {
