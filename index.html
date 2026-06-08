@@ -1725,16 +1725,20 @@ new p5(function(p) {
 
   p.touchMoved = function() {
     if (!State.uploadedImage) return;
-    if (State.currentStage === 2) { Stage3.onMouseDragged(p); return false; }
-    if (State.currentStage === 3) { Stage1.onMouseDragged(p); return false; }
-    // stage 1, 4: return undefined → preventDefault 호출 안 함 → 버튼 클릭 허용
+    // 실제 캔버스 드래그 중일 때만 스크롤을 막음 (버튼 탭 시 허용)
+    if (State.currentStage === 2 && State.stage3.dragging)
+      { Stage3.onMouseDragged(p); return false; }
+    if (State.currentStage === 3 && State.stage1.dragging > 0)
+      { Stage1.onMouseDragged(p); return false; }
   };
 
   p.touchEnded = function() {
     if (!State.uploadedImage) return;
-    if (State.currentStage === 2) { Stage3.onMouseReleased(p); return false; }
-    if (State.currentStage === 3) { Stage1.onMouseReleased(p); return false; }
-    // stage 1, 4: return undefined → click 이벤트 허용 (대칭 판별 버튼 등)
+    // 드래그 중이었을 때만 처리 + preventDefault (버튼 탭의 click은 허용)
+    if (State.currentStage === 2 && State.stage3.dragging)
+      { Stage3.onMouseReleased(p); return false; }
+    if (State.currentStage === 3 && State.stage1.dragging > 0)
+      { Stage1.onMouseReleased(p); return false; }
   };
 
   p.windowResized = function() {
