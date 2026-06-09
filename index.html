@@ -1731,10 +1731,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (n === State.currentStage) return;
 
       if (n < State.currentStage) {
-        // 역방향: 목적지부터 현재 단계까지 모두 초기화
-        for (let i = n; i <= State.currentStage; i++) {
-          resetStage(i);
-        }
+        // 역방향: 목적지 단계만 초기화 (상위 단계 비트는 유지)
+        resetStage(n);
       }
       State.currentStage = n;
       updateDashboard();
