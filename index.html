@@ -593,6 +593,14 @@ const AudioEngine = (() => {
     hihatSynth.volume.value = -16;
   }
 
+  // Transport 실행 중이면 다음 마디 시작, 아니면 0
+  function _seqStartTime() {
+    if (Tone.Transport.state === 'started') {
+      return '@1m';  // 현재 마디 끝나는 시점(다음 마디 첫 박)에 시작
+    }
+    return 0;
+  }
+
   // ── 킥 시퀀서 ──
   function _setKickSeq(pattern) {
     if (kickSeq) { try { kickSeq.stop(); kickSeq.dispose(); } catch(e){} kickSeq = null; }
@@ -601,7 +609,7 @@ const AudioEngine = (() => {
       kickSynth.triggerAttackRelease('C1', '8n', time);
     }, pattern, '16n');
     kickSeq.loop = true;
-    kickSeq.start(0);
+    kickSeq.start(_seqStartTime());
   }
 
   // ── 스네어 시퀀서 ──
@@ -613,7 +621,7 @@ const AudioEngine = (() => {
       snareSynth.triggerAttackRelease('16n', time);
     }, pattern, subdivision || '16n');
     snareSeq.loop = true;
-    snareSeq.start(0);
+    snareSeq.start(_seqStartTime());
   }
 
   // ── 하이햇 시퀀서 ──
@@ -625,7 +633,7 @@ const AudioEngine = (() => {
       hihatSynth.triggerAttackRelease('32n', time);
     }, pattern, subdivision || '16n');
     hihatSeq.loop = true;
-    hihatSeq.start(0);
+    hihatSeq.start(_seqStartTime());
   }
 
   // ── 초기화 ──
