@@ -1731,8 +1731,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (n === State.currentStage) return;
 
       if (n < State.currentStage) {
-        // 역방향: 목적지 단계만 초기화 (상위 단계 비트는 유지)
-        resetStage(n);
+        // 단계 이동 시 리셋 없음 — 기존 마킹/비트 그대로 유지
       }
       State.currentStage = n;
       updateDashboard();
