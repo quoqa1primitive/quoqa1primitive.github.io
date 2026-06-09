@@ -714,7 +714,9 @@ const AudioEngine = (() => {
   // ── 3단계 적용 (하이햇 + BPM) — 스티커 개수 기준 2개마다 단계 상승 ──
   function applyStage3(count, dominantSize) {
     const bpm = count >= 8 ? 155 : count >= 6 ? 145 : count >= 4 ? 130 : count >= 2 ? 115 : 100;
-    setBPM(bpm);
+    if (bpm !== (State.stage3.bpm || 100)) {
+      setBPM(bpm);
+    }
     State.stage3.bpm = bpm;
 
     if (count < 1) {
