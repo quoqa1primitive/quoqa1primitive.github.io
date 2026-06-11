@@ -634,31 +634,37 @@ const AudioEngine = (() => {
   }
 
   // ── 초기화 ──
+  let _initPromise = null;
   async function init() {
     if (ready) return;
-    await Tone.start();
-    buildInstruments();
-    await snareReverb.ready;
-    ready = true;
+    if (_initPromise) { await _initPromise; return; } // 동시 호출 방지
+    _initPromise = (async () => {
+      await Tone.start();
+      buildInstruments();
+      // ready를 reverb 대기 전에 설정 — 대칭 미완료 시 kick이 즉시 재생될 수 있음
+      ready = true;
 
-    // play 버튼 전에 수학 탐색이 먼저 완료된 경우, 현재 state를 재적용
-    const bpm = State.stage3.bpm || 100;
-    Tone.Transport.bpm.value = bpm;
+      const bpm = State.stage3.bpm || 100;
+      Tone.Transport.bpm.value = bpm;
 
-    if (State.stage1.done && State.stage1.ratio !== null) {
-      applyStage1(State.stage1.ratio);
-    } else {
-      _setKickSeq([1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0]);
-    }
+      if (State.stage1.done && State.stage1.ratio !== null) {
+        applyStage1(State.stage1.ratio);
+      } else {
+        _setKickSeq([1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0]);
+      }
 
-    if (State.stage2.done && State.stage2.symmetryType) {
-      const imgW = window._canvasImgW || 500;
-      applyStage2(State.stage2.symmetryType, State.stage2.avgDistance, imgW, State.stage2.points.length);
-    }
+      if (State.stage2.done && State.stage2.symmetryType) {
+        // 스네어 리버브가 필요한 경우에만 대기
+        await snareReverb.ready;
+        const imgW = window._canvasImgW || 500;
+        applyStage2(State.stage2.symmetryType, State.stage2.avgDistance, imgW, State.stage2.points.length);
+      }
 
-    if (State.stage3.stickers.length > 0) {
-      applyStage3(State.stage3.stickers.length, State.stage3.stickerCategory);
-    }
+      if (State.stage3.stickers.length > 0) {
+        applyStage3(State.stage3.stickers.length, State.stage3.stickerCategory);
+      }
+    })();
+    await _initPromise;
   }
 
   function play() {
